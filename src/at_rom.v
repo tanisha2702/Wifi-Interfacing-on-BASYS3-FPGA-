@@ -33,7 +33,6 @@ module at_rom(
 
     // Initialize the memory from your external file
     initial begin
-        // This links directly to the file in your screenshot!
         $readmemh("commands.mem", rom_array);
     end
 
