@@ -1,37 +1,17 @@
 `timescale 1ns / 1ps
-// TOP MODULE (to just check the AT command)
-//////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
-// 
-// Create Date: 30.01.2026 10:10:19
-// Design Name: 
-// Module Name: top
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
-// Dependencies: 
-// 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
-// 
-//////////////////////////////////////////////////////////////////////////////////
 
-// TOP MODULE (to just check the AT command)
 module top(
     input  wire clk,
     input  wire reset,
     input  wire rx,
+    input  wire sensor_in,   // DSM501A sensor input
     output wire tx,
-    output wire usb_tx // To PC (Telnet)
+    output wire usb_tx       // Forward ESP32 output to PC
 );
-   
 
-
+    // --------------------------------
     // internal signals
+    // --------------------------------
     wire s_tick;
     wire tx_start;
     wire tx_done_tick;
@@ -39,9 +19,13 @@ module top(
 
     wire rx_done_tick;
     wire [7:0] rx_data;
-    
-    assign usb_tx = rx; // This forwards everything the ESP32 says to your PC
-   
+
+    wire [31:0] dust_value;
+    wire dust_ready;
+
+    // forward ESP32 response to PC
+    assign usb_tx = rx;
+
     // --------------------------------
     // baud rate generator
     // --------------------------------
@@ -52,7 +36,18 @@ module top(
     );
 
     // --------------------------------
-    // AT-command FSM
+    // dust sensor reader
+    // --------------------------------
+    dust_sensor_reader sensor_unit (
+        .clk(clk),
+        .reset(reset),
+        .sensor_in(sensor_in),
+        .done_tick(dust_ready),
+        .dust_val(dust_value)
+    );
+
+    // --------------------------------
+    // AT command FSM
     // --------------------------------
     at_fsm fsm_unit (
         .clk(clk),
