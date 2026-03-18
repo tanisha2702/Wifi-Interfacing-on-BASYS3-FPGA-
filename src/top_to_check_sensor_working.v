@@ -3,77 +3,45 @@
 module top(
     input  wire clk,
     input  wire reset,
-    input  wire rx,
-    input  wire sensor_in,   // dust sensor input
-    output wire tx,
-    output wire usb_tx,
-    output wire led0         // ✅ ADD THIS
+    input  wire sensor_in,
+    output wire led0,
+    output wire led1
 );
 
-    // --------------------------------
-    // internal signals
-    // --------------------------------
-    wire s_tick;
-    wire tx_start;
-    wire tx_done_tick;
-    wire [7:0] tx_data;
+    wire dust_done_tick;
+    wire [31:0] dust_val;
 
-    wire rx_done_tick;
-    wire [7:0] rx_data;
+    reg [25:0] blink_reg;
+    reg pulse_detected;
 
-    // --------------------------------
-    // DEBUG: SENSOR → LED
-    // --------------------------------
-    assign led0 = sensor_in;   // ✅ DIRECT TEST
+    assign led0 = pulse_detected;
+    assign led1 = (blink_reg != 0);
 
-    // --------------------------------
-    // forward ESP32 response to PC
-    // --------------------------------
-    assign usb_tx = rx;
-
-    // --------------------------------
-    // baud rate generator
-    // --------------------------------
-    baud_gen baud_unit (
+    dust_sensor_reader #(
+        .CLK_FREQ(100_000_000),
+        .SAMPLE_TIME(1)
+    ) dust_unit (
         .clk(clk),
         .reset(reset),
-        .s_tick(s_tick)
+        .sensor_in(sensor_in),
+        .done_tick(dust_done_tick),
+        .dust_val(dust_val)
     );
 
-    // --------------------------------
-    // AT command FSM
-    // --------------------------------
-    at_fsm fsm_unit (
-        .clk(clk),
-        .reset(reset),
-        .tx_done_tick(tx_done_tick),
-        .tx_start(tx_start),
-        .tx_data(tx_data)
-    );
-
-    // --------------------------------
-    // UART transmitter
-    // --------------------------------
-    uart_tx tx_unit (
-        .clk(clk),
-        .reset(reset),
-        .tx_start(tx_start),
-        .s_tick(s_tick),
-        .din(tx_data),
-        .tx_done_tick(tx_done_tick),
-        .tx(tx)
-    );
-
-    // --------------------------------
-    // UART receiver
-    // --------------------------------
-    uart_rx rx_unit (
-        .clk(clk),
-        .reset(reset),
-        .rx(rx),
-        .s_tick(s_tick),
-        .rx_done_tick(rx_done_tick),
-        .dout(rx_data)
-    );
+    always @(posedge clk or posedge reset) begin
+        if (reset) begin
+            blink_reg      <= 0;
+            pulse_detected <= 0;
+        end
+        else begin
+            if (dust_done_tick) begin
+                blink_reg      <= 50_000_000;
+                pulse_detected <= (dust_val != 0);
+            end
+            else if (blink_reg != 0) begin
+                blink_reg <= blink_reg - 1;
+            end
+        end
+    end
 
 endmodule
