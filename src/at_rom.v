@@ -24,12 +24,12 @@
 
 // ROM MODULE using your .mem file
 module at_rom(
-    input  wire [6:0] addr,
+    input  wire [7:0] addr,  // <-- FIXED: Changed to 8 bits [7:0]
     output reg  [7:0] data
 );
 
-    // Declare a memory array: 128 rows, each 8 bits wide
-    reg [7:0] rom_array [0:127];
+    // Declare a memory array: 256 rows, each 8 bits wide
+    reg [7:0] rom_array [0:255];
 
     // Initialize the memory from your external file
     initial begin
